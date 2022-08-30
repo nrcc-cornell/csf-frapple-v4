@@ -27,7 +27,7 @@ const allowedStates = [
 
 const name = 'CSF-FRAPPLE';
 const storeLocations = (selected, locations, name, setSelected, setLocations) => {
-  localStorage.setItem(`${name}.selected`, selected);
+  localStorage.setItem(`${name}.selected`, JSON.stringify(selected));
   localStorage.setItem(`${name}.locations`, JSON.stringify(locations));
   setSelected(selected);
   setLocations(locations);

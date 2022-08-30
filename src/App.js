@@ -47,7 +47,7 @@ function App() {
     const stored = localStorage.getItem(`${name}.locations`);
     return stored ? JSON.parse(stored) : {};
   });
-  const [selected, setSelected] = useState(localStorage.getItem(`${name}.selected`) || '');
+  const [selected, setSelected] = useState(JSON.parse(localStorage.getItem(`${name}.selected`)) || '');
 
 
   // Update data when selected location or date of interest change
