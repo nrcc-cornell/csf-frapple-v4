@@ -1,0 +1,15 @@
+{
+  "files": {
+    "main.css": "/csf-frapple-v4/style/csf-frapple-v4.css",
+    "main.js": "/csf-frapple-v4/js/toolinit.js",
+    "index.html": "/csf-frapple-v4/index.html",
+    "static/media/pin-blue.svg": "/csf-frapple-v4/static/media/pin-blue.a84f9033aac1da64f933.svg",
+    "static/media/pin-red.svg": "/csf-frapple-v4/static/media/pin-red.8ec759728dab1e5998f4.svg",
+    "csf-frapple-v4.css.map": "/csf-frapple-v4/style/csf-frapple-v4.css.map",
+    "toolinit.js.map": "/csf-frapple-v4/js/toolinit.js.map"
+  },
+  "entrypoints": [
+    "style/csf-frapple-v4.css",
+    "js/toolinit.js"
+  ]
+}
