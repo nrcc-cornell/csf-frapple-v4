@@ -1,8 +1,8 @@
 {
   "name": "frapple",
-  "version": "1.0",
+  "version": "0.4.0",
   "private": true,
-  "homepage": "https://pages.github.coecis.cornell.edu/be99/frapple/",
+  "homepage": "https://nrcc-cornell.github.io/csf-frapple-v4/",
   "dependencies": {
     "@emotion/react": "^11.9.3",
     "@emotion/styled": "^11.9.3",
