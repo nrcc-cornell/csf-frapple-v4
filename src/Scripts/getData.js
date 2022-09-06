@@ -76,10 +76,6 @@ function fetchFromAcis(loc, sdate, edate, elems) {
 // Calculates the start and end dates for the season the given date fall within
 function calcSeasonBounds(date) {
   let seasonStart = parseInt(date.split('-')[0]);
-
-
-  /////// Need to change these dates back to 07-31 and 08-01 at some point if Art says to
-
   if (!isAfter(parseISO(date), parseISO(`${seasonStart}-08-31`))) seasonStart -= 1;
 
   return {
@@ -145,19 +141,24 @@ async function getData(loc, dateOfInterest, thresholdArr, gddBase) {
     'interval': [0,0,1]
   }];
 
-  // Gather data from ACIS API
-  let temperatures = await fetchFromAcis(loc, seasonStart, dataEndDate, temperatureElems);
-  
+  // Gather observed data from ACIS API and forecast data from locHrly
+  const [temperatures, forecast] = await Promise.all([
+    fetchFromAcis(loc, seasonStart, dataEndDate, temperatureElems),
+    fetchForecast(loc, gddBase)
+  ]);
+
   if (temperatures[temperatures.length - 1][1] === -999) {
     temperatures.pop();
   }
-  
+
   // Convert ACIS data into arrays for return and for instantiating Spline
   const minTemps = [], dates = [];
   const xs = Array.from({length: temperatures.length * 2}, (v, i) => 12 * i);
-  const ys = temperatures.map(arr => {
-    dates.push(arr[0]);
-    minTemps.push(arr[1]);
+  const ys = temperatures.map((arr, i) => {
+    if (i < temperatures.length) {
+      dates.push(arr[0]);
+      minTemps.push(arr[1]);
+    }
     return [arr[1],arr[2]];
   }).flat();
 
@@ -206,36 +207,41 @@ async function getData(loc, dateOfInterest, thresholdArr, gddBase) {
     'reduce': 'sum'
   };
 
-  // Get data from ACIS and NRCC. The NRCC call is to get the forecast data. The number of ACIS calls varies based on the number of thresholds provided. For each threshold we get an Array of GDDs with accumlations starting at the date that the threshold was crossed
+  // Get data from ACIS. The number of ACIS calls varies based on the number of thresholds provided. For each threshold we get an Array of GDDs with accumlations starting at the date that the threshold was crossed
   const gddsAndForecast = await Promise.all([
-    ...thresholdArr.map(arr => fetchFromAcis(loc, arr[1], dataEndDate, [{ ...gddElems, 'season_start': arr[1].split('-').slice(1).map(v => parseInt(v)) }])),
-    fetchForecast(loc, gddBase)
+    ...thresholdArr.map(threshold => {
+      if (typeof threshold === 'number') return [[null, 0]];
+      return fetchFromAcis(loc, threshold[1], dataEndDate, [{ ...gddElems, 'season_start': threshold[1].split('-').slice(1).map(v => parseInt(v)) }]);
+    })
   ]);
 
   // Construct the final results object. Dates and minTemps can be added straight away, but the gdd arrays need to have 0's prepended to fill them to the same size as the dates and minTemps arrays
   const results = { dates, minTemps, forecast: { dates: [], minTemps: [] } };
   const targetLength = dates.length;
   let gddTotals = {};
-  for (let i = 0; i < gddsAndForecast.length - 1; i++) {
-    const key = 'thresh' + thresholdArr[i][0];
+  for (let i = 0; i < gddsAndForecast.length; i++) {
+    const chillUnmet = typeof thresholdArr[i] === 'number';
+    const key = 'thresh' + (chillUnmet ? thresholdArr[i] : thresholdArr[i][0]);
     results[key] = fillWith(gddsAndForecast[i].map(arr => arr[1]), targetLength, 0, false);
     results.forecast[key] = [];
 
     // Get the last value of each gdd array to use for calculating accumulations if forecast data is needed
-    gddTotals[key] = gddsAndForecast[i].slice(-1)[0][1];
+    gddTotals[key] = gddsAndForecast[i].slice(-1)[0];
   }
 
-  // If forecast data is needed, calculate the gdd acculumations and add them, the dates, and the minTemps to the existing results arrays
+  // If forecast data is needed, calculate the gdd accumulations and add them, the dates, and the minTemps to the existing results arrays
   if (isCurrentSeason) {
-    gddsAndForecast[gddsAndForecast.length - 1].forEach(dayArr => {
+    forecast.forEach(dayArr => {
       if (dayArr[0] !== results.dates[results.dates.length - 1]) {
         results.forecast.dates.push(dayArr[0]);
         results.forecast.minTemps.push(dayArr[1]);
         
         for (const [k,v] of Object.entries(gddTotals)) {
-          const newTotal = v + dayArr[2];
-          results.forecast[k].push(newTotal);
-          gddTotals[k] = newTotal;
+          if (v[1] > 0) {
+            const newTotal = v[1] + dayArr[2];
+            gddTotals[k][1] = newTotal;
+          }
+          results.forecast[k].push(gddTotals[k][1]);
         }
       }
     });
