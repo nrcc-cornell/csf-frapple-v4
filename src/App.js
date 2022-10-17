@@ -128,13 +128,13 @@ function App() {
       <Box
         sx={{
           display: 'flex',
-          width: 904,
+          width: 893,
           height: 400,
           border: `2px solid ${green}`,
           margin: '20px auto',
           '@media (max-width: 907px)': {
             boxSizing: 'border-box',
-            width: '100vw',
+            width: '100%',
             flexDirection: 'column',
             height: 444,
           },
@@ -148,7 +148,7 @@ function App() {
               padding: '4px',
               display: 'flex',
               flexDirection: 'column',
-              gap: 2,
+              gap: '7px',
               borderRight: `2px solid ${green}`,
             }}
           >
@@ -160,10 +160,9 @@ function App() {
 
         <Box
           sx={{
-            width: windowWidth - 4,
+            width: '100%',
             '@media (min-width: 908px)': {
-              maxWidth: 700,
-              width: windowWidth - 200,
+              width: '732px',
             },
           }}
         >

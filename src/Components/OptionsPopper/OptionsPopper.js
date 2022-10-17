@@ -60,7 +60,7 @@ export default function OptionsPopper({ children }) {
                       padding: '0px 10px',
                       display: 'flex',
                       flexDirection: 'column',
-                      gap: 2,
+                      gap: '7px',
                     }}
                   >
                     {children}
