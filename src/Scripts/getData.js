@@ -176,7 +176,7 @@ async function getData(loc, dateOfInterest, thresholdArr, gddBase) {
 
     // Use hourly temp to calculate hourly chill units
     const chill = calcHourlyChillUnits(hourlyTemp);
-
+    
     // Add chill units to sum, but ensure that the sum never goes below 0
     chillSum = Math.max(0, chillSum + chill);
 
