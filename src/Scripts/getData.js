@@ -5,18 +5,34 @@ import { format, isAfter, parseISO, subDays } from 'date-fns';
 const appleTypes = {
   'Empire': {
     threshold: 1100,
-    phenology: {'stip':97,'gtip': 132,'ghalf':192,'cluster':248,'pink':331,'bloom':424,'petalfall':539}
+    phenology: {'stip':97,'gtip': 103,'ghalf':186,'cluster':233,'pink':297,'bloom':393,'petalfall':500}
   },
   'McIntosh': {
     threshold: 1100,
-    phenology: {'stip':91,'gtip': 107,'ghalf':170,'cluster':224,'pink':288,'bloom':384,'petalfall':492}
+    phenology: {'stip':85,'gtip': 122,'ghalf':178,'cluster':233,'pink':294,'bloom':385,'petalfall':484}
   },
   'Red Delicious': {
     threshold: 1000,
-    phenology: {'stip':85,'gtip': 121,'ghalf':175,'cluster':233,'pink':295,'bloom':382,'petalfall':484}
+    phenology: {'stip':97,'gtip': 137,'ghalf':195,'cluster':248,'pink':336,'bloom':433,'petalfall':550}
   }
 };
 
+
+// Baskerville Emin function for calculating GDDs
+function baskervilleEmin(mint, maxt, baset) {
+  let dd;
+  const avgt = (mint + maxt) / 2;
+  if (mint >= baset) {
+    dd = Math.max(avgt - baset, 0);
+  } else if (maxt <= baset) {
+    dd = 0;
+  } else {
+    const tamt = (maxt - mint) /  2;
+    const t1 = Math.asin((baset - avgt) /  tamt);
+    dd =  Math.round(Math.max((((tamt * Math.cos(t1)) - ((baset - avgt) * ((3.14 / 2.0) - t1))) / 3.14), 0) * 100) / 100;
+  }
+  return dd;
+}
 
 
 // Inputs: coords- [number (longitude), number (latitude)], gddBase- number (GDD Base degrees)
@@ -43,7 +59,7 @@ function fetchForecast(coords, gddBase) {
       return data.dlyFcstData.map(arr => {
         const maxt = parseFloat(arr[1]);
         const mint = parseFloat(arr[2]);
-        const gdds = ((maxt + mint) / 2) - gddBase;
+        const gdds = baskervilleEmin(mint, maxt, gddBase);
         return [arr[0].slice(0,10), Math.round(mint), Math.max(0, Math.round(gdds))];
       }); 
     })
@@ -85,6 +101,7 @@ function calcSeasonBounds(date) {
 }
 
 
+// North Carolina Chill Model
 // Inputs: t- number representing an hourly temperature observation in degrees F
 // Returns the chill units for the given hourly temperature
 function calcHourlyChillUnits(t) {
@@ -198,22 +215,36 @@ async function getData(loc, dateOfInterest, thresholdArr, gddBase) {
     if (j === 0) break;
   }
 
-  // Elem obj for retrieving GDDs from ACIS API
-  const gddElems = {
-    'name': 'gdd',
-    'base': gddBase,
-    'interval': [0,0,1],
-    'duration': 'std',
-    'reduce': 'sum'
-  };
+  // Calculate Baskerville Emin GDDs from date threshold was crossed to data end date
+  const gddsAndForecast = thresholdArr.map(threshold => {
+    if (typeof threshold === 'number') {
+      return [[null, 0]];
+    } else {
+      let hasStarted = false;
+      const gddSums = [];
+      let currentSum = 0;
+      for (let i = 0; i < temperatures.length; i++) {
+        let date, mint, maxt;
+        [date, mint, maxt] = temperatures[i]; 
+  
+        if (date === threshold[1]) {
+          hasStarted = true;
+        }
+  
+        if (hasStarted) {
+          const dayGdds = baskervilleEmin(mint, maxt, gddBase);
+          currentSum += dayGdds;
+          gddSums.push([date, currentSum]);
+        }
+  
+        if (date === dataEndDate) {
+          break;
+        }
+      }
+      return gddSums;
+    }
+  });
 
-  // Get data from ACIS. The number of ACIS calls varies based on the number of thresholds provided. For each threshold we get an Array of GDDs with accumlations starting at the date that the threshold was crossed
-  const gddsAndForecast = await Promise.all([
-    ...thresholdArr.map(threshold => {
-      if (typeof threshold === 'number') return [[null, 0]];
-      return fetchFromAcis(loc, threshold[1], dataEndDate, [{ ...gddElems, 'season_start': threshold[1].split('-').slice(1).map(v => parseInt(v)) }]);
-    })
-  ]);
 
   // Construct the final results object. Dates and minTemps can be added straight away, but the gdd arrays need to have 0's prepended to fill them to the same size as the dates and minTemps arrays
   const results = { dates, minTemps, forecast: { dates: [], minTemps: [] } };

@@ -1,6 +1,6 @@
 {
   "name": "frapple",
-  "version": "0.4.0",
+  "version": "4.1.2",
   "private": true,
   "homepage": "https://nrcc-cornell.github.io/csf-frapple-v4/",
   "dependencies": {
