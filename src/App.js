@@ -29,6 +29,9 @@ function App() {
   const chartComponent = useRef(null);
   const windowWidth = useWindowWidth();
 
+  // Log version number for deployment checks
+  useEffect(() => console.log('v4.1.2'), []);
+
   // Update data when selected location or date of interest change
   useEffect(() => {
     updateData(date);
