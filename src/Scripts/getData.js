@@ -69,13 +69,13 @@ function fetchForecast(coords, gddBase) {
 
 // Inputs: loc- [number (longitude), number (latitude)], sdate- Date object || string in date format ('yyyy-mm-dd'), edate- Date object || string in date format ('yyyy-mm-dd'), elems- valid elems array as specified https://www.rcc-acis.org/docs_webservices.html
 // Gets observed weather data specified in elems at given loc for date range from sdate to edate
-function fetchFromAcis(loc, sdate, edate, elems) {
+function fetchFromAcis(loc, sdate, edate, elems, grid) {
   if (sdate instanceof Date) sdate = format(sdate, 'yyyy-MM-dd');
   if (edate instanceof Date) edate = format(edate, 'yyyy-MM-dd');
 
   return fetch('https://grid2.rcc-acis.org/GridData', {
     method: 'POST',
-    body: JSON.stringify({ 'grid': 'prism', loc: loc.join(','), sdate, edate, elems })
+    body: JSON.stringify({ 'grid': grid, loc: loc.join(','), sdate, edate, elems })
   })
     .then(response => {
       if (!response.ok) {
@@ -140,6 +140,19 @@ function fillWith(arr, targetLength, fillValue, append=true) {
   return append ? arr.concat(newPortion) : newPortion.concat(arr);
 }
 
+function combineACIS(acis1, acis2) {
+  const results = JSON.parse(JSON.stringify(acis1));
+  
+  if (results[results.length - 1][1] === -999) {
+    const missingDay = results.pop();
+    if (missingDay[0] === acis2[0][0]) {
+      results.push(acis2[0]);
+    }
+  }
+
+  return results; 
+}
+
 
 // Inputs: loc- [number (longitude), number (latitude)], dateOfInterest: date string in format 'yyyy-mm-dd', thresholdArr- Array of numbers, ggdBase- number
 // Main function, uses inputs to retrieve and digest data into object of Arrays with mandatory return keys of 'dates' and 'minTemps'. The rest of the keys and values are calculated based on contents of thresholdArr
@@ -159,14 +172,13 @@ async function getData(loc, dateOfInterest, thresholdArr, gddBase) {
   }];
 
   // Gather observed data from ACIS API and forecast data from locHrly
-  const [temperatures, forecast] = await Promise.all([
-    fetchFromAcis(loc, seasonStart, dataEndDate, temperatureElems),
+  const [temperaturesPrism, temperaturesNrccNN, forecast] = await Promise.all([
+    fetchFromAcis(loc, seasonStart, dataEndDate, temperatureElems, 'prism'),
+    fetchFromAcis(loc, dataEndDate, dataEndDate, temperatureElems, 'nrcc-nn'),
     fetchForecast(loc, gddBase)
   ]);
 
-  if (temperatures[temperatures.length - 1][1] === -999) {
-    temperatures.pop();
-  }
+  const temperatures = combineACIS(temperaturesPrism, temperaturesNrccNN);
 
   // Convert ACIS data into arrays for return and for instantiating Spline
   const minTemps = [], dates = [];
