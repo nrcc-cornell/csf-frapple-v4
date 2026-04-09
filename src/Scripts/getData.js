@@ -75,7 +75,7 @@ function fetchFromAcis(loc, sdate, edate, elems) {
 
   return fetch('https://grid2.rcc-acis.org/GridData', {
     method: 'POST',
-    body: JSON.stringify({ 'grid': 'nrcc-model', loc: loc.join(','), sdate, edate, elems })
+    body: JSON.stringify({ 'grid': 'prism', loc: loc.join(','), sdate, edate, elems })
   })
     .then(response => {
       if (!response.ok) {
