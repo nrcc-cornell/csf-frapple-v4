@@ -145,7 +145,7 @@ function combineACIS(acis1, acis2) {
   
   if (results[results.length - 1][1] === -999) {
     const missingDay = results.pop();
-    if (missingDay[0] === acis2[0][0]) {
+    if (missingDay[0] === acis2[0][0] && acis2[0][1] !== -999) {
       results.push(acis2[0]);
     }
   }
