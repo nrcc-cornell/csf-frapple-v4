@@ -143,11 +143,13 @@ function fillWith(arr, targetLength, fillValue, append=true) {
 function combineACIS(acis1, acis2) {
   const results = JSON.parse(JSON.stringify(acis1));
   
-  if (results[results.length - 1][1] === -999) {
-    const missingDay = results.pop();
-    if (missingDay[0] === acis2[0][0] && acis2[0][1] !== -999) {
-      results.push(acis2[0]);
-    }
+  let firstMissingDay = null;
+  while (results[results.length - 1][1] === -999) {
+    firstMissingDay = results.pop();
+  }
+
+  if (firstMissingDay[0] === acis2[0][0] && acis2[0][1] !== -999) {
+    results.push(acis2[0]);
   }
 
   return results; 
@@ -274,6 +276,19 @@ async function getData(loc, dateOfInterest, thresholdArr, gddBase) {
 
   // If forecast data is needed, calculate the gdd accumulations and add them, the dates, and the minTemps to the existing results arrays
   if (isCurrentSeason) {
+    let dayPriorToFirstForecast = new Date(forecast[0][0] + 'T00:00:00');
+    dayPriorToFirstForecast.setDate(dayPriorToFirstForecast.getDate() - 1);
+    dayPriorToFirstForecast = dayPriorToFirstForecast.toISOString().split('T')[0];
+
+    while (results.dates[results.dates.length - 1] < dayPriorToFirstForecast) {
+      let nextDay = new Date(results.dates[results.dates.length - 1] + 'T00:00:00');
+      nextDay.setDate(nextDay.getDate() + 1);
+      nextDay = nextDay.toISOString().split('T')[0];
+
+      results.dates.push(nextDay);
+      results.minTemps.push(null);
+    }
+    
     forecast.forEach(dayArr => {
       if (dayArr[0] !== results.dates[results.dates.length - 1]) {
         results.forecast.dates.push(dayArr[0]);
